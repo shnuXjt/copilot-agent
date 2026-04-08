@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.idea/
+venv/
+.DS_Store
+工程化.md
