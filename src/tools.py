@@ -61,3 +61,12 @@ def get_python_analyze_tool():
 # excel 工具出口
 def get_excel_tools():
     return [get_excel_reader_tool(), get_python_analyze_tool()]
+
+# ==================== 🔥 超级工具集合（全部整合） =========================
+def get_super_agent_tools():
+    return [
+        get_search_tool(),
+        calculator,
+        get_excel_reader_tool(),
+        get_python_analyze_tool()
+    ]
