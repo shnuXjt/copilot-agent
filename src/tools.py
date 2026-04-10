@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from langchain_community.tools import DuckDuckGoSearchRun
 from langchain.tools import tool
 import pandas as pd
@@ -70,3 +72,18 @@ def get_super_agent_tools():
         get_excel_reader_tool(),
         get_python_analyze_tool()
     ]
+
+# ================== 时间日期工具 ===========================
+@tool
+def get_current_datetime() -> str:
+    """
+    获取当前系统日期，时间，星期几
+    用于需要知道今天日期，时间，时间计算的场景
+    :return:
+    """
+    now = datetime.now()
+    weekday = ['一', '二', '三', '四', '五', '六', '日'][now.weekday()]
+    return f"当前时间: {now.strftime('%Y年%m月%d日 %H:%M:%S')} 星期{weekday}"
+
+def get_datetime_tool():
+    return get_current_datetime

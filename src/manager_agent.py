@@ -6,6 +6,7 @@ from langchain_openai import ChatOpenAI
 from src.config import MODEL_NAME, MODEL_API_KEY, MODEL_BASE_URL
 from src.workers.calc_worker import get_calc_worker
 from src.workers.code_worker import get_code_worker
+from src.workers.datetime_worker import get_datetime_worker
 from src.workers.excel_worker import get_excel_worker
 from src.workers.search_worker import get_search_workder
 from src.logger import logger
@@ -16,14 +17,8 @@ workers = {
     "search": get_search_workder(),
     "excel": get_excel_worker(),
     "calc": get_calc_worker(),
-    "code": get_code_worker()
-}
-
-workers_result_title = {
-    "search": '搜索结果',
-    "excel": 'Excel分析结果',
-    "calc": '计算结果',
-    "code": '代码执行结果'
+    "code": get_code_worker(),
+    "datetime": get_datetime_worker()
 }
 
 planner_llm = ChatOpenAI(
@@ -47,6 +42,7 @@ def llm_parse_task(user_task: str) -> list:
     - excel：读取、分析Excel文件
     - calc：数学计算、求和、求差、乘法等
     - code：执行Python代码处理复杂逻辑
+    - datetime：获取当前日期、时间、星期几
     
     拆解规则：
     1. 按执行顺序拆分子任务

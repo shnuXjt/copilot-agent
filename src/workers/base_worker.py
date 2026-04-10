@@ -26,7 +26,7 @@ class BaseWorker:
         self.system_prompt = system_prompt
 
         # 统一创建Agent
-        self.agent_executor = self.create_agent()
+        self.agent_executor = self._create_agent()
 
 
     def _create_agent(self) -> AgentExecutor:
