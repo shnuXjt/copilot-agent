@@ -5,7 +5,7 @@ from langchain.tools import tool
 import pandas as pd
 from langchain_core.tools import StructuredTool
 from langchain_experimental.tools import PythonREPLTool
-
+import re
 
 # 封装工具
 
@@ -14,6 +14,25 @@ def get_search_tool():
     return DuckDuckGoSearchRun()
 
 # 计算器工具
+def extract_math_expression(text: str) -> str:
+    """
+    从自然语言中提取数学表达式（自动过滤中文，只留算式）
+    例："计算1+1等于几" → "1+1"
+    """
+    # 正则提取 数字 + 运算符 + 括号
+    pattern = r'[\d\+\-\*/\(\)\.]+'
+    matches = re.findall(pattern, text)
+    # 拼接最长的有效表达式
+    return max(matches, key=len) if matches else text
+
+# 1. 【原始纯函数】可直接调用，用于工具自检（核心修复）
+def calculate_math(expression: str) -> str:
+    """原生数学计算函数，无装饰器，可直接调用"""
+    try:
+        return str(eval(expression.strip()))
+    except Exception as e:
+        return f"计算错误：{str(e)}"
+
 @tool
 def calculator(expesstion: str) -> str:
     '''计算器，输入数字表达式，返回计算结果'''

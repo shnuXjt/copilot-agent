@@ -1,7 +1,11 @@
 from src.skills.base_skill import BaseSkill
-from src.tools import calculator
+from src.tools import calculate_math, calculator
 
 class CalcSkill(BaseSkill):
+
+    def __init__(self):
+        super().__init__(skill_type="calc", tool_func=calculate_math)
+
     @property
     def tools(self):
         return [calculator]
