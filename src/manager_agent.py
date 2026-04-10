@@ -1,24 +1,22 @@
-from json import JSONDecodeError
-
-from langchain_experimental.graph_transformers.llm import system_prompt
 from langchain_openai import ChatOpenAI
 
 from src.config import MODEL_NAME, MODEL_API_KEY, MODEL_BASE_URL
-from src.workers.calc_worker import get_calc_worker
-from src.workers.code_worker import get_code_worker
-from src.workers.datetime_worker import get_datetime_worker
-from src.workers.excel_worker import get_excel_worker
-from src.workers.search_worker import get_search_workder
+from src.skills.calc_skill import CalcSkill
+from src.skills.code_skill import CodeSkill
+from src.skills.datetime_skill import DateTimeSkill
+from src.skills.excel_skill import ExcelSkill
+from src.skills.search_skill import SearchSkill
 from src.logger import logger
 import json
 import re
 
-workers = {
-    "search": get_search_workder(),
-    "excel": get_excel_worker(),
-    "calc": get_calc_worker(),
-    "code": get_code_worker(),
-    "datetime": get_datetime_worker()
+# 技能池
+SKILLS = {
+    "search": SearchSkill(),
+    "excel": ExcelSkill(),
+    "calc": CalcSkill(),
+    "code": CodeSkill(),
+    "datetime": DateTimeSkill()
 }
 
 planner_llm = ChatOpenAI(
@@ -86,6 +84,12 @@ def execute_worker(worker_type: str, task: str, context: str = ""):
     result = workers[worker_type].invoke({"input": full_task})
     return result["output"]
 
+def execute_skill(skill_type: str, task: str, context: str = ""):
+    """执行单个Skill， 支持传入谦虚上下文"""
+    if skill_type not in SKILLS:
+        return f"不支持技能：{skill_type}"
+    return SKILLS[skill_type].run(task, context)
+
 
 def dispatch_task(worker_type: str, task: str) -> str:
     '''调度器： 分配任务给对应worker'''
@@ -124,7 +128,7 @@ def run_manager_agent(task: str) -> str:
         logger.info(f"\n===== 执行第 {idx} 个子任务 | Worker：{worker_type} =====")
 
         # 执行并携带上下文
-        result = execute_worker(worker_type, task_desc, task_context)
+        result = execute_skill(worker_type, task_desc, task_context)
 
         # 保存结果 …& 更新上下文
         all_results.append((f"第（idx)步 【{worker_type}】", task_desc, result))
