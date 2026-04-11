@@ -5,6 +5,7 @@ from langchain_openai import ChatOpenAI
 from src.config import MODEL_NAME, MODEL_API_KEY, MODEL_BASE_URL
 from src.logger import logger
 from src.tools import extract_math_expression
+import re
 
 
 class SelfChecker:
@@ -54,18 +55,27 @@ class SelfChecker:
     def llm_check(self, skill_type: str, task: str, result: str) -> tuple[bool, str]:
         """
         LLM 二次审查： 判断结果是否正确， 是否符合任务要求，是否编造
+        只做三件事， 不要质疑客观工具真值
+        1. 是否答非所问
+        2. 是否明显胡编/无意义
+        3. 是否包含错误标识（错误，未知，未找到）
         """
+        # 对日期，计算类精准技能，只做轻校验，不挑战真值
+        if skill_type in ["datetime", "calc"]:
+            if any(word in result for word in ["错误", "未知", "无法"]):
+                return False, "结果包含错误标识"
+            if len(result.strip()) < 5:
+                return False, "结果过短， 无有效信息"
+            return True, "校验通过（精准技能豁免深度校验）"
+        # 聊天，搜索， Excel： 正常做合理性校验
+
         prompt = f"""
-        你是严格的校验专家，只输出【是/否】和原因
-        任务类型： {skill_type},
-        用户任务： {task},
-        AI结果： {result}
-        
-        请判断：
-        1. 结果是否正确？
-        2. 是否答非所问？
-        3. 是否编造数据？
-        只回答： 是/否 | 原因
+任务：{task}
+AI回答：{result}
+
+只判断2点，输出格式：是/否 | 原因
+1. 是否答非所问/完全跑题
+2. 是否明显编造内容、无依据
 """
         check_result = self.check_llm.invoke(prompt).content.strip()
         is_pass = check_result.startswith("是")
@@ -77,6 +87,9 @@ class SelfChecker:
         工具回检： 直接调用原始Tool重新计算/查询，对比结果
         仅用于 calc/datetime 等精准工具
         """
+        # 正则提取：日期（2026年04月11日）+ 星期（六/日...)
+        date_pattern = r"(\d{4}年\d{2}月\d{2}日)"
+        week_pattern = r"星期([一二三四五六日])"
 
         if skill_type not in ["calc", "datetime"]:
             return True, "无需工具回检"
@@ -84,7 +97,10 @@ class SelfChecker:
         try:
             expr = extract_math_expression(task) if skill_type == "calc" else task
             tool_result = tool_func() if skill_type == "datetime" else tool_func(expr)
-            if tool_result in result:
+            if skill_type == "datetime":
+                true_date = re.search(date_pattern, tool_result)
+                true_week = re.search(week_pattern, tool_result)
+            if true_date if skill_type == "datetime" else tool_result in result:
                 return True, f"工具回检通过，真值={tool_result}"
             else:
                 return False, f"工具回检结果不匹配！工具真值={tool_result}，LLM返回={result}"

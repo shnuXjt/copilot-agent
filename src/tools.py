@@ -93,6 +93,13 @@ def get_super_agent_tools():
     ]
 
 # ================== 时间日期工具 ===========================
+# 🔥 原生纯函数（无@tool，自检专用，可直接调用）
+def get_current_datetime_raw() -> str:
+    """原生获取时间函数，无装饰器，用于工具自检"""
+    now = datetime.now()
+    weekday = ['一', '二', '三', '四', '五', '六', '日'][now.weekday()]
+    return f"当前时间: {now.strftime('%Y年%m月%d日 %H:%M:%S')} 星期{weekday}"
+
 @tool
 def get_current_datetime() -> str:
     """

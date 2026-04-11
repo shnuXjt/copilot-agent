@@ -6,7 +6,7 @@ from langchain_openai import ChatOpenAI
 
 from src.config import MODEL_NAME, MODEL_API_KEY, MODEL_BASE_URL, VERBOSE
 from src.memory import agent_memory
-from src.self_cheker import self_checker
+from src.self_checker import self_checker
 from src.logger import logger
 
 

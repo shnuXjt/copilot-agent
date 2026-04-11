@@ -1,11 +1,11 @@
 from src.skills.base_skill import BaseSkill
-from src.tools import get_current_datetime
+from src.tools import get_current_datetime, get_current_datetime_raw
 
 
 class DateTimeSkill(BaseSkill):
 
     def __init__(self):
-        super().__init__(skill_type="datetime", tool_func=get_current_datetime)
+        super().__init__(skill_type="datetime", tool_func=get_current_datetime_raw)
 
     @property
     def tools(self):

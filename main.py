@@ -1,6 +1,6 @@
 from src.agent import create_search_agent, run_agent
 from src.excel_agent import create_excel_agent, run_excel_agent
-from src.manager_agent import run_manager_agent
+from src.manager_agent import run_manager_agent, chat_with_agent
 from src.memory import agent_memory
 from src.super_agent import create_super_agent, run_super_agent
 
@@ -8,12 +8,12 @@ from src.super_agent import create_super_agent, run_super_agent
 
 if __name__ == "__main__":
     print("=" * 50)
-    print("🤝 Manager + Worker 多智能体协作系统")
-    print("支持：任务自动拆解 → 分工执行 → 汇总结果")
+    print("🤖 正常对话 + 工具自动调用 Agent")
+    print("✅ 自由聊天 ✅ 记忆持久 ✅ 工具自动触发")
     print("=" * 50)
 
     # 使用默认会话
-    current_session = agent_memory.default_session
+    sid = agent_memory.default_session
 
     # 循环对话
     while True:
@@ -23,7 +23,7 @@ if __name__ == "__main__":
             break
 
         # 执行任务
-        answer = run_manager_agent(user_input, current_session)
+        answer = chat_with_agent(user_input, sid)
 
         print("\n" + "=" * 50)
         print("📌 结果：")
