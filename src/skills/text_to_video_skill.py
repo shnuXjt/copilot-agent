@@ -2,8 +2,7 @@ from src.skills.base_skill import BaseSkill
 from src.tools import get_text_to_video_tool
 
 class TextToVideoSkill(BaseSkill):
-    def __init__(self):
-        super().__init__(skill_type="text_to_video")
+    skill_type="text_to_video"
 
     @property
     def tools(self):

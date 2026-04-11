@@ -3,8 +3,7 @@ from src.tools import get_excel_reader_tool
 
 class ExcelSkill(BaseSkill):
 
-    def __init__(self):
-        super().__init__(skill_type="excel")
+    skill_type="excel"
 
     @property
     def tools(self):

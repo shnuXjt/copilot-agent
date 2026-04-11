@@ -2,8 +2,7 @@ from src.skills.base_skill import BaseSkill
 from src.tools import get_text_to_image_tool
 
 class TextToImageSkill(BaseSkill):
-    def __init__(self):
-        super().__init__(skill_type="text_to_image")
+    skill_type="text_to_image"
 
     @property
     def tools(self):

@@ -25,6 +25,72 @@ class SelfChecker:
         # 最大重试次数
         self.max_retry = 2
 
+        # 自检策略注册器（字典存储）
+        self._check_strategies = {}
+        # 自动注册所有技能的自检策略
+        self._register_default_strategies()
+
+    # 策略注册机制
+    def _register_default_strategies(self):
+        """注册所有内置技能的自检逻辑"""
+        self.register_check_strategy("calc", self._check_calc)
+        self.register_check_strategy("datetime", self._check_datetime)
+        self.register_check_strategy("text_to_image", self._check_text_to_image)
+        self.register_check_strategy("text_to_video", self._check_text_to_video)
+
+    def register_check_strategy(self, skill_type: str, check_func):
+        """外部注册新技能自检"""
+        self._check_strategies[skill_type] = check_func
+
+    # ======================= 🔥 每个技能自检 = 独立函数（无耦合） ==============================
+    def _check_calc(self, task: str, llm_result: str) -> tuple[bool, str]:
+        """计算器专属自检"""
+        from src.tools import extract_math_expression, calculate_math
+        expr = extract_math_expression(task)
+        true_val = calculate_math(expr)
+        if "错误" in true_val:
+            return False, f"计算无效：{expr}"
+        if true_val in llm_result:
+            return True, f"计算结果正确：{true_val}"
+        return False, f"计算结果不匹配：真值={true_val}"
+
+    def _check_datetime(self, task: str, llm_result: str) -> tuple[bool, str]:
+        """日期时间专属自检（宽松匹配）"""
+        import re
+        from src.tools import get_current_datetime_raw
+        true_str = get_current_datetime_raw()
+
+        date_pattern = r"(\d{4}年\d{2}月\d{2}日)"
+        week_pattern = r"星期([一二三四五六日])"
+
+        true_date = re.search(date_pattern, true_str)
+        true_week = re.search(week_pattern, true_str)
+
+        if not true_date or not true_week:
+            return True, "日期格式无需严格校验"
+
+        true_date = true_date.group(1)
+        true_week = true_week.group(1)
+
+        has_date = true_date in llm_result
+        has_week = f"星期{true_week}" in llm_result
+
+        if has_date and has_week:
+            return True, f"日期校验通过：{true_date} 星期{true_week}"
+        return False, f"日期或星期错误：真值={true_date} 星期{true_week}"
+
+    def _check_text_to_image(self, task: str, llm_result: str) -> tuple[bool, str]:
+        """文生图自检"""
+        if "✅" in llm_result and any(keyword in llm_result for keyword in task.split()[:5]):
+            return True, "图片生成校验通过"
+        return False, "图片生成失败或信息不匹配"
+
+    def _check_text_to_video(self, task: str, llm_result: str) -> tuple[bool, str]:
+        """文生视频自检"""
+        if "✅" in llm_result and any(keyword in llm_result for keyword in task.split()[:5]):
+            return True, "视频生成校验通过"
+        return False, "视频生成失败或信息不匹配"
+
     # ============================ 1. 规则校验 ==============================
     def rule_check(self, skill_type: str, task: str, result: str) -> tuple[bool, str]:
         """
@@ -82,50 +148,24 @@ AI回答：{result}
         return is_pass, check_result
 
     # ========================= 3. 工具回检（最高精度，用原工具验证） ======================================
-    def tool_recheck(self, skill_type: str, task: str, result: str, tool_func) -> tuple[bool, str]:
+    def tool_recheck(self, skill_type: str, task: str, result: str) -> tuple[bool, str]:
         """
         工具回检： 直接调用原始Tool重新计算/查询，对比结果
         仅用于 calc/datetime 等精准工具
         """
-        # 正则提取：日期（2026年04月11日）+ 星期（六/日...)
-        date_pattern = r"(\d{4}年\d{2}月\d{2}日)"
-        week_pattern = r"星期([一二三四五六日])"
-
-        # ===================== 文生图 自检 =====================
-        if skill_type == "text_to_image":
-            from src.tools import text_to_image_raw
-            true_result = text_to_image_raw(task)
-            # 宽松校验：包含成功标识 + 提示词关键词 即通过
-            if "✅" in result and any(keyword in result for keyword in task.split()[:5]):
-                return True, "图片生成校验通过"
-            return False, "图片生成失败或信息不匹配"
-
-            # ===================== 文生视频 自检 =====================
-        if skill_type == "text_to_video":
-            from src.tools import text_to_video_raw
-            true_result = text_to_video_raw(task)
-            if "✅" in result and any(keyword in result for keyword in task.split()[:5]):
-                return True, "视频生成校验通过"
-            return False, "视频生成失败或信息不匹配"
-
-        if skill_type not in ["calc", "datetime"]:
-            return True, "无需工具回检"
-
         try:
-            expr = extract_math_expression(task) if skill_type == "calc" else task
-            tool_result = tool_func() if skill_type == "datetime" else tool_func(expr)
-            if skill_type == "datetime":
-                true_date = re.search(date_pattern, tool_result)
-                true_week = re.search(week_pattern, tool_result)
-            if true_date if skill_type == "datetime" else tool_result in result:
-                return True, f"工具回检通过，真值={tool_result}"
-            else:
-                return False, f"工具回检结果不匹配！工具真值={tool_result}，LLM返回={result}"
+            # 查表获取自检函数
+            check_func = self._check_strategies.get(skill_type)
+            if check_func:
+                return check_func(task, result)
+
+            # 无自检策略的技能（如chat/search/excel）直接通过
+            return True, "无需工具回检"
         except Exception as e:
-            return False, f"工具回检失败： {str(e)}"
+            return False, f"回检异常：{str(e)}"
 
     # ====================== 总校验入口 ================================
-    def full_check(self, skill_type: str, task: str, result: str, tool_func=None) -> tuple[bool, str]:
+    def full_check(self, skill_type: str, task: str, result: str) -> tuple[bool, str]:
         """三级全量检查"""
         logger.info(f"🔍 开始自检 | 技能：{skill_type}")
 
@@ -142,7 +182,7 @@ AI回答：{result}
             return  False, msg
 
         # 3. 工具回检（精准技能）
-        pass_tool, msg = self.tool_recheck(skill_type, task, result, tool_func)
+        pass_tool, msg = self.tool_recheck(skill_type, task, result)
         if not pass_tool:
             logger.warning(f"工具回检失败: {msg}")
             return False, msg

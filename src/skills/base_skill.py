@@ -1,4 +1,4 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 
 from langchain_classic.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -9,15 +9,19 @@ from src.memory import agent_memory
 from src.self_checker import self_checker
 from src.logger import logger
 
-
-class BaseSkill:
+# 抽象基类： 自动初始化，子类无需写任何__init__
+class BaseSkill(ABC):
     """
     [通用技能基类]
     1. 封装所有重复逻辑
     2. 直接继承 Agent 执行能力
     3. 完全替代原来的worker
     """
-    def __init__(self, skill_type: str, tool_func=None):
+
+    # 子类只需要定义这个类属性， 自动生效
+    skill_type: str
+
+    def __init__(self):
         # 统一LLM
         self.llm = ChatOpenAI(
             model=MODEL_NAME,
@@ -29,8 +33,7 @@ class BaseSkill:
         # 制动创建执行器（ Skill自己就是可执行单元）
         self.executor = self._create_executor()
 
-        self.skill_type = skill_type # 技能类型： search/excel/calc/datetime
-        self.tool_func = tool_func # 原工具函数（用于回检)
+        self.skill_type = self.skill_type # 技能类型： search/excel/calc/datetime
 
     @property
     @abstractmethod
@@ -76,8 +79,7 @@ class BaseSkill:
             is_pass, msg = self_checker.full_check(
                 skill_type=self.skill_type,
                 task=full_task,
-                result=result,
-                tool_func=self.tool_func
+                result=result
             )
 
             # 3. 校验通过 -> 返回结果

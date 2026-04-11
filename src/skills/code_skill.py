@@ -3,8 +3,7 @@ from src.tools import get_python_analyze_tool
 
 class CodeSkill(BaseSkill):
 
-    def __init__(self):
-        super().__init__(skill_type="code")
+    skill_type="code"
 
     @property
     def tools(self):
