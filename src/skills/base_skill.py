@@ -5,6 +5,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai import ChatOpenAI
 
 from src.config import MODEL_NAME, MODEL_API_KEY, MODEL_BASE_URL, VERBOSE
+from src.memory import agent_memory
 from src.self_cheker import self_checker
 from src.logger import logger
 
@@ -59,8 +60,10 @@ class BaseSkill:
             handle_parsing_errors=True
         )
     # 技能直接可以运行，不需要worker
-    def run(self, task: str, context: str=""):
-        full_task = f"上下午： {context}\n 任务：{task}" if context else task
+    def run(self, task: str, context: str="", session_id: str = None) -> str:
+        # 获取对话历史
+        history_prompt = agent_memory.get_history_prompt(session_id)
+        full_task = f"{history_prompt}\n当前任务：{task}\n上下文： {context} " if context else task
         retry = 0
 
         # 自动重试机制
@@ -87,6 +90,3 @@ class BaseSkill:
 
         # 最大重试后仍失败
         return "⚠️ 多次校验失败，无法保证结果正确性，请重试任务"
-
-        result = self.executor.invoke({"input": full_task })
-        return result['output']

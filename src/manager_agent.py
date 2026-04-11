@@ -1,6 +1,7 @@
 from langchain_openai import ChatOpenAI
 
 from src.config import MODEL_NAME, MODEL_API_KEY, MODEL_BASE_URL
+from src.memory import agent_memory
 from src.skills.calc_skill import CalcSkill
 from src.skills.code_skill import CodeSkill
 from src.skills.datetime_skill import DateTimeSkill
@@ -71,35 +72,14 @@ def llm_parse_task(user_task: str) -> list:
         return []
 
 # ======================= 任务调度 + 上下文传递 =================================
-def execute_worker(worker_type: str, task: str, context: str = ""):
-    """执行单个worker， 支持传入前序上下文"""
-    if worker_type not in workers:
-        return f"❌ 不支持的Worker类型：{worker_type}"
-    # 拼接上下文（让后续任务知道前面的结果
-    full_task = task
-    if context:
-        full_task = f"前置任务结果： {context}\n当前任务： {task}"
-
-    logger.info(f"📤 分配任务 → {worker_type}：{full_task}")
-    result = workers[worker_type].invoke({"input": full_task})
-    return result["output"]
-
-def execute_skill(skill_type: str, task: str, context: str = ""):
+def execute_skill(skill_type: str, task: str, context: str = "", session_id: str=None):
     """执行单个Skill， 支持传入谦虚上下文"""
     if skill_type not in SKILLS:
         return f"不支持技能：{skill_type}"
-    return SKILLS[skill_type].run(task, context)
+    return SKILLS[skill_type].run(task, context, session_id)
 
 
-def dispatch_task(worker_type: str, task: str) -> str:
-    '''调度器： 分配任务给对应worker'''
-    if worker_type not in workers:
-        return f"不支持的任务类型： {worker_type}"
-    logger.info(f"📤 分配任务至 {worker_type} Worker：{task}")
-    result = workers[worker_type].invoke({"input": task})
-    return result["output"]
-
-def run_manager_agent(task: str) -> str:
+def run_manager_agent(task: str, session_id: str=None) -> str:
     """
     Manager核心逻辑：
     1. 分析任务
@@ -110,6 +90,8 @@ def run_manager_agent(task: str) -> str:
     :return:
     """
     logger.info(f"📋 Manager 接收任务：{task}")
+    # 保存用户问题到记忆
+    agent_memory.save_user_message(session_id, task)
 
     # 任务拆解
     sub_tasks = llm_parse_task(task)
@@ -128,7 +110,7 @@ def run_manager_agent(task: str) -> str:
         logger.info(f"\n===== 执行第 {idx} 个子任务 | Worker：{worker_type} =====")
 
         # 执行并携带上下文
-        result = execute_skill(worker_type, task_desc, task_context)
+        result = execute_skill(worker_type, task_desc, task_context, session_id)
 
         # 保存结果 …& 更新上下文
         all_results.append((f"第（idx)步 【{worker_type}】", task_desc, result))
@@ -136,6 +118,9 @@ def run_manager_agent(task: str) -> str:
 
     # 汇总结果
     final_summary = llm_summary_result(task, all_results)
+
+    # 保存ai回答到记忆
+    agent_memory.save_ai_message(session_id, final_summary)
     return final_summary
 
 # ========================== LLM最终结果汇总 ====================================
