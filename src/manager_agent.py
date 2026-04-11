@@ -12,13 +12,18 @@ from src.logger import logger
 import json
 import re
 
+from src.skills.text_to_image_skill import TextToImageSkill
+from src.skills.text_to_video_skill import TextToVideoSkill
+
 # 技能池
 SKILLS = {
     "search": SearchSkill(),
     "excel": ExcelSkill(),
     "calc": CalcSkill(),
     "code": CodeSkill(),
-    "datetime": DateTimeSkill()
+    "datetime": DateTimeSkill(),
+    "text_to_image": TextToImageSkill(),    # 文生图
+    "text_to_video": TextToVideoSkill()     # 文生视频
 }
 
 planner_llm = ChatOpenAI(
@@ -43,6 +48,8 @@ def llm_parse_task(user_task: str) -> list:
     - calc：数学计算、求和、求差、乘法等
     - code：执行Python代码处理复杂逻辑
     - datetime：获取当前日期、时间、星期几
+    - text_to_image: 文生图
+    - text_to_video：文生视频
     
     拆解规则：
     1. 按执行顺序拆分子任务

@@ -91,6 +91,23 @@ AI回答：{result}
         date_pattern = r"(\d{4}年\d{2}月\d{2}日)"
         week_pattern = r"星期([一二三四五六日])"
 
+        # ===================== 文生图 自检 =====================
+        if skill_type == "text_to_image":
+            from src.tools import text_to_image_raw
+            true_result = text_to_image_raw(task)
+            # 宽松校验：包含成功标识 + 提示词关键词 即通过
+            if "✅" in result and any(keyword in result for keyword in task.split()[:5]):
+                return True, "图片生成校验通过"
+            return False, "图片生成失败或信息不匹配"
+
+            # ===================== 文生视频 自检 =====================
+        if skill_type == "text_to_video":
+            from src.tools import text_to_video_raw
+            true_result = text_to_video_raw(task)
+            if "✅" in result and any(keyword in result for keyword in task.split()[:5]):
+                return True, "视频生成校验通过"
+            return False, "视频生成失败或信息不匹配"
+
         if skill_type not in ["calc", "datetime"]:
             return True, "无需工具回检"
 

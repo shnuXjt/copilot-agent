@@ -1,0 +1,14 @@
+from src.skills.base_skill import BaseSkill
+from src.tools import get_text_to_image_tool
+
+class TextToImageSkill(BaseSkill):
+    def __init__(self):
+        super().__init__(skill_type="text_to_image")
+
+    @property
+    def tools(self):
+        return [get_text_to_image_tool()]
+
+    @property
+    def system_prompt(self):
+        return "你是文生图专家，根据用户的文字描述生成高质量图片，返回生成结果"

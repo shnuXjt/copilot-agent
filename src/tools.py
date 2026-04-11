@@ -1,5 +1,5 @@
 from datetime import datetime
-
+import os
 from langchain_community.tools import DuckDuckGoSearchRun
 from langchain.tools import tool
 import pandas as pd
@@ -113,3 +113,63 @@ def get_current_datetime() -> str:
 
 def get_datetime_tool():
     return get_current_datetime
+
+# ======================== 文生图工具 ================================
+# 🔥 原生函数（自检用，无装饰器）
+def text_to_image_raw(prompt: str) -> str:
+    """
+    文生图原生函数
+    这里是通用模板， 你可以替换为： Stable Diffusion/ DALL·E/ Midjourney / 本地ComfyUI 接口
+    """
+    try:
+        # 模拟生成（替换为真实的API调用即可)
+        save_dir = "generated_images"
+        os.makedirs(save_dir, exist_ok=True)
+        filename = f"{save_dir}/image_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+
+        # =========== 替换为真实API =====================
+        # response = requests.post("你的文生图API", json={"prompt": prompt})
+        # return response.json()["image_url"]
+        # ==============================================
+
+        return f"✅ 图片生成成功！\n提示词：{prompt}\n保存路径：{filename}"
+    except Exception as e:
+        return f"❌ 图片生成失败：{str(e)}"
+# @tool 工具（Agent调用）
+@tool
+def text_to_image(prompt: str) -> str:
+    """文生图工具， 根据文字描述生成图片"""
+    return text_to_image_raw(prompt)
+
+def get_text_to_image_tool():
+    return text_to_image
+
+# ======================= 文生视频 工具 ============================
+# 🔥 原生函数（自检用，无装饰器）
+def text_to_video_raw(prompt: str) -> str:
+    """
+    文生视频原生函数
+    替换为： Sora / Runway / 本地视频大模型API
+    """
+    try:
+        save_dir = "generated_videos"
+        os.makedirs(save_dir, exist_ok=True)
+        filename = f"{save_dir}/video_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4"
+
+        # ===================== 替换为真实API =====================
+        # response = requests.post("你的文生视频API", json={"prompt": prompt})
+        # return response.json()["video_url"]
+        # ======================================================
+
+        return f"✅ 视频生成成功！\n提示词：{prompt}\n保存路径：{filename}"
+    except Exception as e:
+        return f"❌ 视频生成失败：{str(e)}"
+
+# @tool 工具（Agent调用）
+@tool
+def text_to_video(prompt: str) -> str:
+    """文胜视频工具，根据文字描述生成视频"""
+    return text_to_video_raw(prompt)
+
+def get_text_to_video_tool():
+    return text_to_video
