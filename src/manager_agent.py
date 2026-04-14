@@ -1,6 +1,7 @@
 from langchain_experimental.llms.anthropic_functions import prompt
 from langchain_openai import ChatOpenAI
-
+# 线程池： 并行执行
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from src.config import MODEL_NAME, MODEL_API_KEY, MODEL_BASE_URL
 from src.memory import agent_memory
 from src.skills.calc_skill import CalcSkill
@@ -79,10 +80,13 @@ def llm_parse_task(user_task: str, retry: int = 1) -> list:
     4. 严格输出JSON格式，结构如下：
     {
         "sub_tasks": [
-            {"skill": "skill类型", "task": "清晰的子任务描述"},
+            {"skill": "skill类型", "task": "清晰的子任务描述", "depend_on": -1},
             ...
         ]
     }
+    5. depend_on=-1 → 无依赖，可并行执行
+    6. depend_on=0 → 依赖第1个任务，必须串行
+    7. 无关联任务（如查时间+搜新闻+画图）全部设为-1，并行执行
     """
     user_prompt = f"用户任务：{user_task}\n请按规则拆解为有序子任务，只返回JSON"
     # 调用LLM拆解
@@ -96,6 +100,10 @@ def llm_parse_task(user_task: str, retry: int = 1) -> list:
     try:
         task_json = json.loads(raw_content)
         sub_tasks = task_json.get("sub_tasks", [])
+        # 补全默认依赖
+        for i, task in enumerate(sub_tasks):
+            if "depend_on" not in task:
+                task["depend_on"] = -1
         # 校验过滤无效任务
         return validate_sub_tasks(sub_tasks)
     except Exception as e:
@@ -104,7 +112,7 @@ def llm_parse_task(user_task: str, retry: int = 1) -> list:
             return llm_parse_task(user_task, retry -1)
         # 重试失败 -> 规则兜底尝试生成1个任务
         fallback_skill = rule_based_route(user_task)
-        return [{"skill": fallback_skill, "task": user_task}] if fallback_skill else []
+        return [{"skill": fallback_skill, "task": user_task, "depend_on": -1}] if fallback_skill else []
 
 # ======================= 任务调度 + 上下文传递 =================================
 def execute_skill(skill_type: str, task: str, context: str = "", session_id: str=None):
@@ -318,20 +326,62 @@ def run_complex_task(sub_tasks: list, session_id: str) -> str:
     if not sub_tasks:
         return "未识别可执行任务"
 
-    context = ""
-    for idx, sub in enumerate(sub_tasks):
-        skill_name = sub["skill"]
-        task = sub["task"]
-        if skill_name not in SKILLS:
-            continue
-        logger.info(f"▶ 执行第{idx+1}步：{skill_name} | {task}")
-        try:
-            # 带上下文 + 记忆执行skill
-            res = SKILLS[skill_name].run(task=task, context=context, session_id=session_id)
-            context = f"第{idx+1}步结果： {res}"
-        except Exception as e:
-            context = f"第{idx+1}步执行失败：{str(e)}"
-    return context
+    context_list = [""] * len(sub_tasks) # 按顺序存储所有任务结果
+    serial_tasks = [] # 需要串行执行的任务
+    parallel_tasks = [] # 可并行执行的任务
+
+    # 1. 分类任务： 并行/串行
+    for idx, task in enumerate(sub_tasks):
+        task["idx"] = idx
+        if task["depend_on"] == -1:
+            parallel_tasks.append(task)
+        else:
+            serial_tasks.append(task)
+
+    # 2. 执行并行任务（无依赖，同时跑)
+    if parallel_tasks:
+        logger.info(f"并行执行 {len(parallel_tasks)} 个无依赖任务")
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            future_to_task = {}
+            for task in parallel_tasks:
+                t = executor.submit(
+                    SKILLS[task["skill"]].run,
+                    task=task["task"],
+                    context="",
+                    session_id=session_id
+                )
+                future_to_task[t] = task
+
+            # 收集并行结果
+            for future in as_completed(future_to_task):
+                task = future_to_task[future]
+                try:
+                    res = future.result()
+                    context_list[task["idx"]] = f"第{task['idx']+1}步结果：{res}"
+                    logger.info(f"✅ 并行任务完成：{task['skill']} | {task['task']}")
+                except Exception as e:
+                    context_list[task["idx"]] = f"第{task['idx']+1}步执行失败：{str(e)}"
+    # 3. 执行串行任务（有依赖，顺序跑）
+    if serial_tasks:
+        logger.info(f"📥 串行执行 {len(serial_tasks)} 个有依赖任务")
+        for task in serial_tasks:
+            idx = task["idx"]
+            dep_idx = task["depend_on"]
+            # 获取依赖任务的上下文
+            dep_context = context_list[dep_idx] if 0 <= dep_idx < len(context_list) else ""
+            try:
+                logger.info(f"▶ 执行第{idx+1}步：{task['skill']} | {task['task']}")
+                res = SKILLS[task["skill"]].run(
+                    task=task["task"],
+                    context=dep_context,
+                    session_id=session_id
+                )
+                context_list[idx]=f"第{idx+1}步结果：{res}"
+            except Exception as e:
+                context_list[idx] = f"第{idx+1}步执行失败：{str(e)}"
+
+    # 4. 按顺序汇总所有结果
+    return "\n".join([c for c in context_list if c])
 
 
 # ============================================================
