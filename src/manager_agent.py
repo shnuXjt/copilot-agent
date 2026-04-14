@@ -26,6 +26,27 @@ SKILLS = {
     "text_to_video": TextToVideoSkill()     # 文生视频
 }
 
+SKILL_KEYWORD_MAP = {
+    "calc": ["计算", "多少", "加减", "乘除", "等于", "求和", "差值", "天数"],
+    "datetime": ["今天", "日期", "时间", "星期", "几号", "几点"],
+    "text_to_image": ["画", "生成图", "图片", "插画", "设计", "壁纸"],
+    "text_to_video": ["视频", "生成视频", "短片", "动画"],
+    "excel": ["excel", "表格", "xlsx", "xls", "销售额", "数据"],
+    "search": ["搜索", "查一下", "最新", "新闻", "信息"]
+}
+
+def rule_based_route(user_query: str) -> str | None:
+    """
+    规则路由：关键词硬匹配，LLM 判断错时兜底
+    返回：skill_type 或 None
+    """
+    query = user_query.lower()
+    for skill_type, keywords in SKILL_KEYWORD_MAP.items():
+        for kw in keywords:
+            if kw in query:
+                return skill_type
+    return None
+
 planner_llm = ChatOpenAI(
     model=MODEL_NAME,
     api_key=MODEL_API_KEY,
@@ -33,8 +54,8 @@ planner_llm = ChatOpenAI(
     temperature=0
 )
 #========================== 核心：LLM自动任务拆解（结构化JSON）=================================
-
-def llm_parse_task(user_task: str) -> list:
+# 升级： 增加 重试 + 校验
+def llm_parse_task(user_task: str, retry: int = 1) -> list:
     """
     LLM自动拆解用户任务 → 输出有序子任务列表
     返回：[ {"worker": "search", "task": "xxx"}, ... ]
@@ -74,10 +95,16 @@ def llm_parse_task(user_task: str) -> list:
     # 解析JSON
     try:
         task_json = json.loads(raw_content)
-        return task_json.get("sub_tasks", [])
+        sub_tasks = task_json.get("sub_tasks", [])
+        # 校验过滤无效任务
+        return validate_sub_tasks(sub_tasks)
     except Exception as e:
-        logger.error(f"任务拆解JSON解析失败：{e}，原始内容：{raw_content}")
-        return []
+        # 拆解失败自动重试1次
+        if retry > 0:
+            return llm_parse_task(user_task, retry -1)
+        # 重试失败 -> 规则兜底尝试生成1个任务
+        fallback_skill = rule_based_route(user_task)
+        return [{"skill": fallback_skill, "task": user_task}] if fallback_skill else []
 
 # ======================= 任务调度 + 上下文传递 =================================
 def execute_skill(skill_type: str, task: str, context: str = "", session_id: str=None):
@@ -234,7 +261,12 @@ def chat_with_agent(user_input: str, session_id: str=None):
 """
 
 # 判断: 闲聊/复杂任务
+# 升级： 规则优先，LLM辅助
 def classify_task(user_query: str, history: str) -> str:
+    # 🔥 规则兜底：命中工具关键词 → 直接判定复杂任务
+    if rule_based_route(user_query):
+        return "complex"
+
     """判断任务类型： chat(直接聊) / complex(需拆解）"""
     prompt = f"""
 历史对话： {history}
@@ -249,6 +281,10 @@ def classify_task(user_query: str, history: str) -> str:
 
 # 执行多步任务
 def run_complex_task(sub_tasks: list, session_id: str) -> str:
+    # 无有效任务直接返回空
+    if not sub_tasks:
+        return "未识别可执行任务"
+
     context = ""
     for idx, sub in enumerate(sub_tasks):
         skill_name = sub["skill"]
@@ -256,9 +292,28 @@ def run_complex_task(sub_tasks: list, session_id: str) -> str:
         if skill_name not in SKILLS:
             continue
         logger.info(f"▶ 执行第{idx+1}步：{skill_name} | {task}")
-        # 带上下文 + 记忆执行skill
-        res = SKILLS[skill_name].run(task=task, context=context, session_id=session_id)
-        context = f"第{idx+1}步结果： {res}"
+        try:
+            # 带上下文 + 记忆执行skill
+            res = SKILLS[skill_name].run(task=task, context=context, session_id=session_id)
+            context = f"第{idx+1}步结果： {res}"
+        except Exception as e:
+            context = f"第{idx+1}步执行失败：{str(e)}"
     return context
 
 
+# ============================================================
+# 子任务拆解校验
+def validate_sub_tasks(sub_tasks: list) -> list:
+    """
+    【新增】校验拆解结果：
+    1. 移除skill不存在的任务
+    2. 空任务自动过滤
+    3. 保证至少有有效任务
+    """
+    valid = []
+    for st in sub_tasks:
+        skill = st.get("skill")
+        task = st.get("task")
+        if skill in SKILLS and task and len(task.strip()) > 1:
+            valid.append(st)
+    return valid
