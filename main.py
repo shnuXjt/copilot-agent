@@ -1,6 +1,6 @@
 from src.agent import create_search_agent, run_agent
 from src.excel_agent import create_excel_agent, run_excel_agent
-from src.manager_agent import run_manager_agent, chat_with_agent
+from src.manager_agent import run_manager_agent, chat_with_agent, chat_with_agent_stream
 from src.memory import agent_memory
 from src.super_agent import create_super_agent, run_super_agent
 
@@ -23,9 +23,18 @@ if __name__ == "__main__":
             break
 
         # 执行任务
-        answer = chat_with_agent(user_input, sid)
+        # answer = chat_with_agent
+        # print("\n" + "=" * 50)
+        # print("📌 结果：")
+        # print(answer)
+        # 流式输出
+        print("AI:", end="", flush=True)
+        full_ans = ""
+        for chunk in chat_with_agent_stream(user_input, sid):
+            print(chunk, end="", flush=True)
+            full_ans += chunk
+        print()
+        # 保存完整答案
+        agent_memory.save_ai_message(sid, full_ans)
 
-        print("\n" + "=" * 50)
-        print("📌 结果：")
-        print(answer)
 

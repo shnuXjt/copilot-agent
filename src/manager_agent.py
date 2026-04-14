@@ -258,6 +258,32 @@ def chat_with_agent(user_input: str, session_id: str=None):
         agent_memory.save_ai_message(session_id, err_msg)
         return err_msg
 
+# 流式对话函数
+def chat_with_agent_stream(user_input: str, session_id: str=None):
+    '''流式输出版本， 打字机效果'''
+    try:
+        agent_memory.save_user_message(session_id, user_input)
+        history = agent_memory.get_history_prompt(session_id)
+        task_type = classify_task(user_input, history)
+
+        if task_type == "chat":
+            prompt = f"{history}\n用户：{user_input}\n请自然回答"
+            # 流式调用LLM
+            for chunk in main_llm.stream(prompt):
+                yield chunk.content
+        else:
+            sub_tasks = llm_parse_task(user_input)
+            tool_result = run_complex_task(sub_tasks, session_id)
+            final_prompt = f"""
+历史对话：{history}
+用户问题：{user_input}
+工具结果：{tool_result}
+自然回答：
+"""
+            for chunk in main_llm.stream(final_prompt):
+                yield chunk.content
+    except Exception as e:
+        yield f"系统异常： {str(e)}"
 
 # ============= 简单任务和复杂任务需要区分，复杂任务需要拆解 ====================
 """
