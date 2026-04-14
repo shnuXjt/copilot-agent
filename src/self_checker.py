@@ -4,9 +4,22 @@ from langchain_openai import ChatOpenAI
 
 from src.config import MODEL_NAME, MODEL_API_KEY, MODEL_BASE_URL
 from src.logger import logger
-from src.tools import extract_math_expression
-import re
 
+# =========================== 自检配置 =================================
+CHECK_CONFIG = {
+    # 格式：skill_type: 是否开启工具回检
+    "calc": True,
+    "datetime": True,
+    "text_to_image": False,    # 图片生成关闭严格自检
+    "text_to_video": False,    # 视频生成关闭严格自检
+    "chat": False,
+    "search": False,
+    "excel": False,
+    "code": False
+}
+
+# 无需工具回检的技能，默认通过
+DEFAULT_PASS_SKILLS = ["chat", "search", "excel", "code"]
 
 class SelfChecker:
     """
@@ -149,6 +162,9 @@ AI回答：{result}
 
     # ========================= 3. 工具回检（最高精度，用原工具验证） ======================================
     def tool_recheck(self, skill_type: str, task: str, result: str) -> tuple[bool, str]:
+        # 🔥 按配置开关：关闭则直接通过
+        if not CHECK_CONFIG.get(skill_type, False):
+            return True, "该技能已关闭工具回检"
         """
         工具回检： 直接调用原始Tool重新计算/查询，对比结果
         仅用于 calc/datetime 等精准工具
