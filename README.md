@@ -1,171 +1,206 @@
-# 🤖 Copilot Agent
+# Seedream 5.0
+**企业级多模态智能对话 Agent 框架**
+自然对话优先 + 工具自动调度 + 多会话管理 + 并行任务执行 + 持久化记忆 + 结果可信自检
 
-一个基于 LangChain 的智能助手项目，提供联网搜索和 Excel 数据分析两种 Agent 模式。
+---
 
-## ✨ 功能特性
+## 项目介绍
+Seedream 是一套面向生产环境的轻量化 LLM Agent 架构，专注解决大模型**记忆弱、任务拆解不稳定、工具调用不可靠、长对话上下文爆炸**等工程问题。
+系统采用 **Skill-Tool 分层设计**，支持日常闲聊与复杂任务自动区分，可无缝集成计算、日期查询、文生图、文生视频等能力，并支持多会话隔离与并行任务加速。
 
-### 🌐 联网搜索 Agent
-- 使用 DuckDuckGo 进行实时网络搜索
-- 内置计算器工具
-- 基于 Qwen 大语言模型生成准确、简洁的回答
-- 获取最新信息并整合回答
+## 核心特性
+- ✅ **自然对话优先**
+  闲聊直接响应，需工具自动调用，不破坏对话体验
+- ✅ **多会话管理**
+  创建/切换/删除/重命名会话，会话独立持久化，互不干扰
+- ✅ **智能任务拆解**
+  LLM 自动拆解复杂任务 + 关键词规则兜底，执行更稳定
+- ✅ **并行 + 串行混合执行**
+  无依赖任务并行加速，有依赖任务串行保证逻辑正确
+- ✅ **三级结果自检**
+  规则校验 + LLM 合理性校验 + 工具真值回检，拒绝幻觉
+- ✅ **长对话智能记忆**
+  自动摘要压缩历史 + 保留最新对话，解决 Token 爆炸与失忆
+- ✅ **多模态能力**
+  支持文生图、文生视频，可对接真实 API
+- ✅ **流式输出**
+  打字机式回复，用户体验接近商用产品
+- ✅ **全局异常容错**
+  任意环节出错不崩溃，优雅降级返回
+- ✅ **SQLite 持久化**
+  对话历史、会话信息永久存储，重启不丢失
 
-### 📊 Excel 数据分析 Agent
-- 自动读取 Excel 文件并分析数据结构
-- 使用 Python + Pandas 进行数据处理和计算
-- 提供数据摘要、统计信息和头部数据预览
-- 基于真实数据给出分析结论
+---
 
-## 🏗️ 项目结构
-
+## 系统架构
 ```
-copilot-agent/
+用户交互 → 任务分类（闲聊 / 复杂任务）
+       ↓
+闲聊 → 原生 LLM 流式对话
+复杂任务 → LLM 任务拆解 → 并行/串行调度 Skill
+       ↓
+Skill（业务能力）→ 调用 Tool（原子能力）
+       ↓
+执行结果 → 三级自检引擎 → 自然语言回复
+       ↓
+对话记忆 → SQLite 持久化 + 智能摘要
+```
+
+### 分层职责
+1. **Manager Agent**
+   任务分类、任务拆解、技能路由、并行/串行调度、结果汇总
+2. **Skill 层**
+   计算器、日期时间、文生图、文生视频、Excel、搜索等业务技能
+3. **Tool 层**
+   底层原子能力封装，`原生函数 + @tool` 分离，避免调用异常
+4. **Memory 模块**
+   多会话管理、对话存储、历史摘要、缓存优化
+5. **SelfChecker 引擎**
+   策略模式自检，可按技能开关，无 if 堆砌，易扩展
+
+---
+
+## 功能清单
+### 对话与记忆
+- 多轮上下文对话
+- 长对话自动摘要，避免 Token 超限
+- 会话自动命名（AI 智能生成标题）
+- 会话创建、切换、删除、重命名
+
+### 任务与工具
+- 计算（加减乘除、天数差等）
+- 日期时间查询（当前日期、星期、时间）
+- 文生图（可对接 Stable Diffusion / DALL·E）
+- 文生视频（可对接 Runway / 国内云服务）
+- Excel 数据分析（可扩展）
+- 联网搜索（可扩展）
+- 复杂任务自动拆解
+- 无依赖任务并行执行
+
+### 稳定性保障
+- 关键词规则路由兜底
+- 任务拆解校验与自动重试
+- 工具真值自检，防止 LLM 篡改结果
+- 全局异常捕获，系统不崩溃
+- 自检策略可配置，支持按技能开关
+
+---
+
+## 项目目录
+```
+/
 ├── src/
-│   ├── agent.py          # 联网搜索 Agent 实现
-│   ├── excel_agent.py    # Excel 数据分析 Agent 实现
-│   ├── tools.py          # 工具集（搜索、计算器、Excel 读取、Python REPL）
-│   ├── config.py         # 配置管理（从 .env 加载）
-│   └── logger.py         # 日志配置
-├── data/
-│   └── test.xlsx         # 示例 Excel 文件
-├── main.py               # 主入口程序
-├── requirements.txt      # Python 依赖
-├── .env                  # 环境变量配置
-├── .env.local            # 本地环境变量（可选）
-└── .gitignore
+│   ├── skills/                  # 技能模块
+│   │   ├── base_skill.py        # 技能基类，统一封装执行逻辑
+│   │   ├── calc_skill.py        # 计算技能
+│   │   ├── datetime_skill.py    # 日期时间技能
+│   │   ├── text_to_image_skill.py  # 文生图技能
+│   │   └── text_to_video_skill.py  # 文生视频技能
+│   ├── tools.py                 # 原子工具函数
+│   ├── manager_agent.py         # 任务调度与执行中心
+│   ├── memory.py                # 会话与记忆管理
+│   ├── db.py                    # SQLite 数据库操作
+│   ├── self_checker.py          # 三级自检引擎（策略模式）
+│   ├── config.py                # 模型与全局配置
+│   └── logger.py                # 日志工具
+├── generated_images/            # 文生图输出目录
+├── generated_videos/            # 文生视频输出目录
+├── agent_memory.db              # 会话与对话持久化库
+├── main.py                      # 系统入口
+└── README.md
 ```
 
-## 🚀 快速开始
+---
 
-### 前置要求
-
-- Python 3.9+
-- pip 包管理器
-
-### 安装步骤
-
-1. **克隆项目**
+## 快速开始
+### 1. 环境依赖
 ```bash
-cd copilot-agent
+pip install langchain langchain-openai requests sqlite3
 ```
 
-2. **安装依赖**
-```bash
-pip install -r requirements.txt
+### 2. 配置模型
+修改 `src/config.py`
+```python
+LLM_MODEL = "your-model-name"
+LLM_API_KEY = "your-api-key"
+LLM_BASE_URL = "your-base-url"
+VERBOSE = True
 ```
 
-3. **配置环境变量**
-
-编辑 `.env` 文件，配置你的 LLM API 信息：
-
-```env
-# LLM 配置
-MODEL_NAME="qwen-max"
-MODEL_API_KEY="your-api-key-here"
-MODEL_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
-
-# Agent 配置
-VERBOSE=True
-```
-
-> **注意**: 本项目默认使用阿里云 Qwen 模型（DashScope）。你也可以修改为其他兼容 OpenAI API 的模型服务。
-
-4. **运行程序**
+### 3. 启动系统
 ```bash
 python main.py
 ```
 
-## 📖 使用指南
+---
 
-### 选择 Agent 模式
+## 会话指令手册
+| 指令 | 功能 |
+|------|------|
+| `/list` | 列出所有会话 |
+| `/new` | 创建新会话 |
+| `/switch 会话ID前缀` | 切换到指定会话 |
+| `/del 会话ID前缀` | 删除指定会话 |
+| `/rename 名称` | 重命名当前会话 |
+| `/clear` | 清空控制台 |
+| `exit` | 退出程序 |
 
-运行程序后，会出现交互式菜单：
+---
 
+## 使用示例
+### 日常闲聊
 ```
-==================================================
-请选择Agent模式：
-1 → 🌐 联网搜索Agent
-2 → 📊 Excel数据分析Agent
-==================================================
-请输入数字 1/2 并回车
-```
-
-### 模式 1: 联网搜索 Agent
-
-输入你的问题，Agent 会自动搜索网络并给出回答：
-
-```
-请输入你的问题：2024年人工智能最新发展趋势
-```
-
-### 模式 2: Excel 数据分析 Agent
-
-输入数据分析问题（需包含文件路径）：
-
-```
-请输入数据分析问题（包含文件路径，如：data/test.xlsx）：
-分析 data/test.xlsx 文件中的数据，给出销售总结
+你：你好呀
+AI：你好！很高兴为你服务~
 ```
 
-## 🛠️ 技术架构
+### 单工具调用
+```
+你：今天是几月几号星期几
+AI：今天是2026年04月11日，星期六。
+```
 
-### 核心框架
+### 并行多任务
+```
+你：告诉我今天日期、算下到国庆还有多少天，再画一张星空下的猫
+AI：（并行执行日期查询、计算、文生图，一次性返回结果）
+```
 
-- **LangChain 1.2.15** - Agent 编排框架
-- **LangChain OpenAI** - LLM 集成
-- **LangChain Experimental** - Python REPL 工具
+### 会话管理
+```
+你：/list
+你：/new
+你：/switch a1b2c3d4
+你：/rename 日期计算
+```
 
-### LLM 模型
+---
 
-- 默认使用 **Qwen-Max**（阿里云通义千问）
-- 支持任何兼容 OpenAI API 的模型服务
-- 温度参数设置为 0，确保输出稳定性
+## 扩展指南
+### 新增技能
+1. 在 `skills/` 下新建技能类，只需声明 `skill_type`、`tools`、`system_prompt`
+2. 在 `manager_agent.py` 注册技能
+3. （可选）在 `self_checker.py` 注册自检策略
 
-### 工具集
+### 新增工具
+1. 在 `tools.py` 编写**原生函数**（供自检调用）
+2. 添加 `@tool` 装饰包装（供 Agent 调用）
+3. 技能中引入该工具
 
-#### 搜索 Agent 工具
-- `DuckDuckGoSearchRun` - 网络搜索
-- `calculator` - 数学计算
+### 开启/关闭自检
+修改 `self_checker.py` 中的 `CHECK_CONFIG`，按技能启用/关闭工具回检。
 
-#### Excel Agent 工具
-- `excel_reader` - Excel 文件读取和结构分析
-- `PythonREPLTool` - Python 代码执行（用于 Pandas 数据分析）
+---
 
-## ⚙️ 配置说明
+## 优化与演进方向
+- 向量数据库长时语义记忆（Chroma/FAISS）
+- WebUI / FastAPI 接口部署
+- 动态插件化工具注册
+- 多用户权限与隔离
+- 执行监控与统计面板
+- 更多多模态能力（语音、3D 生成）
 
-所有配置通过 `.env` 文件管理：
+---
 
-| 配置项 | 说明 | 默认值 |
-|--------|------|--------|
-| `MODEL_NAME` | 模型名称 | `qwen-max` |
-| `MODEL_API_KEY` | API 密钥 | - |
-| `MODEL_BASE_URL` | API 基础 URL | 阿里云 DashScope |
-| `VERBOSE` | 是否显示详细日志 | `True` |
-
-## 📝 示例
-
-### Excel 数据分析示例
-
-项目包含示例文件 `data/test.xlsx`，你可以尝试以下查询：
-
-- "读取 data/test.xlsx 并分析数据结构"
-- "计算 data/test.xlsx 中销售额的总和"
-- "分析 data/test.xlsx 的销售趋势"
-
-## 🔒 安全提示
-
-- **不要将 `.env` 文件提交到版本控制系统**
-- 项目已配置 `.gitignore` 忽略敏感信息
-- 建议使用 `.env.local` 存储本地配置
-
-## 🤝 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-## 📄 许可证
-
-MIT License
-
-## 📮 联系方式
-
-如有问题或建议，请提交 Issue。
+## 版权说明
+本项目为企业级 LLM Agent 工程化实践框架，可用于学习、二次开发及商业落地，保留作者署名。
