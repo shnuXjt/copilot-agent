@@ -221,35 +221,42 @@ def should_use_tool(user_query: str, history: str) -> dict:
 
 # 对话入口
 def chat_with_agent(user_input: str, session_id: str=None):
-    # 1. 保存用户消息
-    agent_memory.save_user_message(session_id, user_input)
-    # 2. 获取对话记忆
-    history = agent_memory.get_history_prompt(session_id)
+    try:
+        # 1. 保存用户消息
+        agent_memory.save_user_message(session_id, user_input)
+        # 2. 获取对话记忆
+        history = agent_memory.get_history_prompt(session_id)
 
-    # 3. 分类： 直接聊 / 复杂任务
-    task_type = classify_task(user_input, history)
+        # 3. 分类： 直接聊 / 复杂任务
+        task_type = classify_task(user_input, history)
 
-    if task_type == "chat":
-        # 简单任务 - 正常大模型对话
-        prompt = f"{history}\n用户： {user_input}\n请自然回答"
-        final = main_llm.invoke(prompt).content
-    else:
-        # 复杂任务
-        sub_tasks = llm_parse_task(user_input)
-        tool_result = run_complex_task(sub_tasks, session_id)
-        # LLM整理成自然语言
-        final_prompt = f"""
-        【历史对话】{history}
-        【用户问题】{user_input}
-        【工具结果】{tool_result}
-        请根据工具结果，自然、简洁地回答用户，不要格式、不要标注。
-        """
-        final = main_llm.invoke(final_prompt).content
+        if task_type == "chat":
+            # 简单任务 - 正常大模型对话
+            prompt = f"{history}\n用户： {user_input}\n请自然回答"
+            final = main_llm.invoke(prompt).content
+        else:
+            # 复杂任务
+            sub_tasks = llm_parse_task(user_input)
+            tool_result = run_complex_task(sub_tasks, session_id)
+            # LLM整理成自然语言
+            final_prompt = f"""
+            【历史对话】{history}
+            【用户问题】{user_input}
+            【工具结果】{tool_result}
+            请根据工具结果，自然、简洁地回答用户，不要格式、不要标注。
+            """
+            final = main_llm.invoke(final_prompt).content
 
 
-    # 5. 保存AI回答
-    agent_memory.save_ai_message(session_id, final)
-    return final
+        # 5. 保存AI回答
+        agent_memory.save_ai_message(session_id, final)
+        return final
+    except Exception as e:
+        # 全量优雅降级： 出错仍返回友好提示，不崩溃
+        err_msg = f"系统暂时繁忙: {str(e)}"
+        logger.error(err_msg)
+        agent_memory.save_ai_message(session_id, err_msg)
+        return err_msg
 
 
 # ============= 简单任务和复杂任务需要区分，复杂任务需要拆解 ====================
