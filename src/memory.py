@@ -2,7 +2,7 @@
 from langchain_openai import ChatOpenAI
 
 from src.config import MODEL_NAME, MODEL_API_KEY, MODEL_BASE_URL
-from src.db import create_session, add_message, get_session_history
+from src.db import create_session, add_message, get_session_history, get_session_name, update_session_name
 from src.logger import logger
 
 
@@ -23,9 +23,24 @@ class AgentMemory:
     """全局记忆管理器： 会话管理 + 历史存储 + 上下文构建(只能摘要)"""
     def __init__(self):
         # 默认会话（自动创建）
-        self.default_session = create_session()
+        self.current_session_id = create_session("默认会话")
+
+    # 智能命名会话
+    def auto_name_session(self, session_id: str, first_query: str):
+        if get_session_name(session_id) != "未命名会话":
+            return
+        try:
+            prompt = f"请用4-6个字概括这个用户请求: {first_query}"
+            name = SUMMARY_LLM.invoke(prompt).content.strip()
+            update_session_name(session_id, name)
+        except:
+            pass
 
     def save_user_message(self, session_id: str, content: str):
+        # 第一次发言自动命名
+        history = get_session_history(session_id)
+        if len(history) == 0:
+            self.auto_name_session(session_id, content)
         add_message(session_id, 'user', content)
         # 新增消息清空对应缓存
         _summary_cache.pop(session_id, None)
