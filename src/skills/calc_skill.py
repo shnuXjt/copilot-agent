@@ -1,5 +1,6 @@
 from src.skills.base_skill import BaseSkill
-from src.tools import calculator
+from src.tools import tool_registry
+
 
 class CalcSkill(BaseSkill):
 
@@ -7,7 +8,7 @@ class CalcSkill(BaseSkill):
 
     @property
     def tools(self):
-        return [calculator]
+        return [tool_registry.get_tool("calculator")]
 
     @property
     def system_prompt(self):

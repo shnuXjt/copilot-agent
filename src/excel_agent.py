@@ -3,7 +3,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai import ChatOpenAI
 
 from src.config import MODEL_NAME, MODEL_API_KEY, MODEL_BASE_URL, VERBOSE
-from src.tools import get_excel_tools
+from src.tools import tool_registry
 from src.logger import logger
 
 
@@ -18,7 +18,7 @@ def create_excel_agent():
     )
 
     # 2. 加载Excel专用tools
-    tools = get_excel_tools()
+    tools = [tool_registry.get_tool('excel_analyzer')]
 
     # 3. 专业提示词
     prompt = ChatPromptTemplate.from_messages([

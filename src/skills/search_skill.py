@@ -1,5 +1,6 @@
 from src.skills.base_skill import BaseSkill
-from src.tools import get_search_tool
+from src.tools import tool_registry
+
 
 class SearchSkill(BaseSkill):
 
@@ -7,7 +8,7 @@ class SearchSkill(BaseSkill):
 
     @property
     def tools(self):
-        return [get_search_tool()]
+        return [tool_registry.get_tool("duckduckgo_search")]
 
     @property
     def system_prompt(self):

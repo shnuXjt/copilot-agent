@@ -3,7 +3,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai import ChatOpenAI
 
 from src.config import MODEL_NAME, MODEL_API_KEY, MODEL_BASE_URL, VERBOSE
-from src.tools import get_all_tools
+from src.tools import tool_registry
 from src.logger import logger
 
 
@@ -18,7 +18,7 @@ def create_search_agent():
     )
 
     # 2. 获取工具
-    tools = get_all_tools()
+    tools = tool_registry.get_all_tools()
 
     # 3. 提示词模板
     prompt = ChatPromptTemplate.from_messages([

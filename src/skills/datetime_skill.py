@@ -1,5 +1,5 @@
 from src.skills.base_skill import BaseSkill
-from src.tools import get_current_datetime, get_current_datetime_raw
+from src.tools import tool_registry
 
 
 class DateTimeSkill(BaseSkill):
@@ -8,7 +8,7 @@ class DateTimeSkill(BaseSkill):
 
     @property
     def tools(self):
-        return [get_current_datetime]
+        return [tool_registry.get_tool("get_current_datetime")]
 
     @property
     def system_prompt(self):

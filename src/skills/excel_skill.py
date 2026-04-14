@@ -1,5 +1,6 @@
 from src.skills.base_skill import BaseSkill
-from src.tools import get_excel_reader_tool
+from src.tools import tool_registry
+
 
 class ExcelSkill(BaseSkill):
 
@@ -7,7 +8,7 @@ class ExcelSkill(BaseSkill):
 
     @property
     def tools(self):
-        return [get_excel_reader_tool()]
+        return [tool_registry.get_tool("excel_analyzer")]
 
     @property
     def system_prompt(self):

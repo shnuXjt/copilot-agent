@@ -58,7 +58,7 @@ class SelfChecker:
     # ======================= 🔥 每个技能自检 = 独立函数（无耦合） ==============================
     def _check_calc(self, task: str, llm_result: str) -> tuple[bool, str]:
         """计算器专属自检"""
-        from src.tools import extract_math_expression, calculate_math
+        from src.tools.calc import extract_math_expression, calculate_math
         expr = extract_math_expression(task)
         true_val = calculate_math(expr)
         if "错误" in true_val:
@@ -70,7 +70,7 @@ class SelfChecker:
     def _check_datetime(self, task: str, llm_result: str) -> tuple[bool, str]:
         """日期时间专属自检（宽松匹配）"""
         import re
-        from src.tools import get_current_datetime_raw
+        from src.tools.datetime import get_current_datetime_raw
         true_str = get_current_datetime_raw()
 
         date_pattern = r"(\d{4}年\d{2}月\d{2}日)"
@@ -140,7 +140,7 @@ class SelfChecker:
         3. 是否包含错误标识（错误，未知，未找到）
         """
         # 对日期，计算类精准技能，只做轻校验，不挑战真值
-        if skill_type in ["datetime", "calc"]:
+        if skill_type in ["datetime", "calc", "search", "excel"]:
             if any(word in result for word in ["错误", "未知", "无法"]):
                 return False, "结果包含错误标识"
             if len(result.strip()) < 5:

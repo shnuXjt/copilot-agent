@@ -1,5 +1,6 @@
 from src.skills.base_skill import BaseSkill
-from src.tools import get_python_analyze_tool
+from src.tools import tool_registry
+
 
 class CodeSkill(BaseSkill):
 
@@ -7,7 +8,7 @@ class CodeSkill(BaseSkill):
 
     @property
     def tools(self):
-        return [get_python_analyze_tool()]
+        return [tool_registry.get_tool("code_analyze")]
 
     @property
     def system_prompt(self):

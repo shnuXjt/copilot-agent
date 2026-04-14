@@ -8,3 +8,4 @@ venv/
 .DS_Store
 工程化.md
 agent_memory.db
+docs/

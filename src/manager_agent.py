@@ -26,6 +26,9 @@ SKILLS = {
     "text_to_image": TextToImageSkill(),    # 文生图
     "text_to_video": TextToVideoSkill()     # 文生视频
 }
+# 自动获取所有可用工具名称（用于LLM任务拆解）
+AVAILABLE_SKILLS = [skill for skill in SKILLS.keys()]
+
 
 SKILL_KEYWORD_MAP = {
     "calc": ["计算", "多少", "加减", "乘除", "等于", "求和", "差值", "天数"],

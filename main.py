@@ -63,7 +63,7 @@ def process_command(user_input: str) -> bool:
 if __name__ == "__main__":
     os.system("cls" if os.name == "nt" else "clear")
     print("=" * 60)
-    print("🌊 Seedream 4.0  智能多会话 Agent")
+    print("🌊 智能多会话 Agent")
     print("✅ 多会话 | ✅ 长记忆 | ✅ 工具调用 | ✅ 流式输出 | ✅ 自检")
     print("指令：/list /new /switch id /del id /rename 名称 /clear")
     print("=" * 60)

@@ -1,12 +1,13 @@
 from src.skills.base_skill import BaseSkill
-from src.tools import get_text_to_video_tool
+from src.tools import tool_registry
+
 
 class TextToVideoSkill(BaseSkill):
     skill_type="text_to_video"
 
     @property
     def tools(self):
-        return [get_text_to_video_tool()]
+        return [tool_registry.get_tool("text_to_video")]
 
     @property
     def system_prompt(self):
