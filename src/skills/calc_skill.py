@@ -13,3 +13,7 @@ class CalcSkill(BaseSkill):
     @property
     def system_prompt(self):
         return "你是计算专员，只做数学计算"
+
+    @property
+    def parameters(self):
+        return [{"name": "expression", "type": "string", "required": True, "desc": "数学表达式"}]

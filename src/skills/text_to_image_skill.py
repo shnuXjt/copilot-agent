@@ -12,3 +12,7 @@ class TextToImageSkill(BaseSkill):
     @property
     def system_prompt(self):
         return "你是文生图专家，根据用户的文字描述生成高质量图片，返回生成结果"
+
+    @property
+    def parameters(self):
+        return [{"name": "prompt", "type": "string", "required": True, "desc": "图片提示词"}]

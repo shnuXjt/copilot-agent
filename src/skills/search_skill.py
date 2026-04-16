@@ -13,3 +13,10 @@ class SearchSkill(BaseSkill):
     @property
     def system_prompt(self):
         return "你是专业搜索专员，只做联网搜索"
+
+    # 🔥 单参规范
+    @property
+    def parameters(self):
+        return [
+            {"name": "query", "type": "string", "required": True, "desc": "搜索关键词"}
+        ]

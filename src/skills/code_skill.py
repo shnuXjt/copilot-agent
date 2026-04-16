@@ -13,3 +13,10 @@ class CodeSkill(BaseSkill):
     @property
     def system_prompt(self):
         return "你是代码执行专员，运行Python代码"
+
+    # 🔥 单参规范
+    @property
+    def parameters(self):
+        return [
+            {"name": "query", "type": "string", "required": True, "desc": "Python代码"}
+        ]

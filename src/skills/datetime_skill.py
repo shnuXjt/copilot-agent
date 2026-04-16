@@ -13,3 +13,7 @@ class DateTimeSkill(BaseSkill):
     @property
     def system_prompt(self):
         return "你是时间查询专员，获取当前日期、时间、星期几"
+
+    @property
+    def parameters(self):
+        return []

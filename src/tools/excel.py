@@ -23,7 +23,7 @@ def excel_reader(file_path: str) -> str:
         return f"❌ 读取Excel失败： {str(e)}"
 
 class ExcelInput(BaseModel):
-    file_path: str = Field(escription="Excel文件路径，如：data/sales.xlsx")
+    file_path: str = Field(description="Excel文件路径，如：data/sales.xlsx")
 # 自动被注册中心发现
 excel_analyzer = StructuredTool(
     name="excel_analyzer",

@@ -26,6 +26,20 @@ SKILLS = {
     "text_to_image": TextToImageSkill(),    # 文生图
     "text_to_video": TextToVideoSkill()     # 文生视频
 }
+
+# 自动生成技能 + 参数说明
+def get_skill_param_desc():
+    desc = []
+    for skill_name, skill in SKILLS.items():
+        params = skill.parameters
+        if not params:
+            desc.append(f"- {skill_name}: 无参数")
+        else:
+            param_str = "、".join([f"{p['name']}({'必选' if p['required'] else '可选'})" for p in params])
+            desc.append(f"- {skill_name}: 参数={param_str}")
+    return "\n".join(desc)
+
+SKILL_PARAM_DESC = get_skill_param_desc()
 # 自动获取所有可用工具名称（用于LLM任务拆解）
 AVAILABLE_SKILLS = [skill for skill in SKILLS.keys()]
 
@@ -64,7 +78,7 @@ def llm_parse_task(user_task: str, retry: int = 1) -> list:
     LLM自动拆解用户任务 → 输出有序子任务列表
     返回：[ {"worker": "search", "task": "xxx"}, ... ]
     """
-    system_prompt ="""
+    system_prompt =f"""
     你是专业的AI任务规划师，只输出**纯净JSON**，不添加任何多余文字、解释、markdown。
 
     可用Skill类型：
@@ -76,17 +90,19 @@ def llm_parse_task(user_task: str, retry: int = 1) -> list:
     - text_to_image: 文生图
     - text_to_video：文生视频
     
+    技能参数规范：
+    {SKILL_PARAM_DESC}
+    
     拆解规则：
     1. 按执行顺序拆分子任务
     2. 子任务必须依赖前序结果时，要明确写清楚
     3. 不拆分无意义的小任务
     4. 严格输出JSON格式，结构如下：
-    {
-        "sub_tasks": [
-            {"skill": "skill类型", "task": "清晰的子任务描述", "depend_on": -1},
-            ...
-        ]
-    }
+        {{
+            "sub_tasks": [
+                {{"skill": "skill类型", "task": "清晰的子任务描述", "depend_on": -1}}
+            ]
+        }}
     5. depend_on=-1 → 无依赖，可并行执行
     6. depend_on=0 → 依赖第1个任务，必须串行
     7. 无关联任务（如查时间+搜新闻+画图）全部设为-1，并行执行
