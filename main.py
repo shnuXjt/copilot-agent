@@ -1,9 +1,11 @@
+from adapter import legacy_adapter
 from src.agent import create_search_agent, run_agent
 from src.db import get_session_name, list_all_sessions, create_session, del_session, update_session_name
 from src.excel_agent import create_excel_agent, run_excel_agent
 from src.manager_agent import run_manager_agent, chat_with_agent, chat_with_agent_stream
 from src.memory import agent_memory
 import os
+from core.brain.core_brain import core_brain
 
 def print_session_status():
     '''打印当前会话状态'''
@@ -64,10 +66,15 @@ if __name__ == "__main__":
     os.system("cls" if os.name == "nt" else "clear")
     print("=" * 60)
     print("🌊 智能多会话 Agent")
-    print("✅ 多会话 | ✅ 长记忆 | ✅ 工具调用 | ✅ 流式输出 | ✅ 自检")
     print("指令：/list /new /switch id /del id /rename 名称 /clear")
     print("=" * 60)
-    print_session_status()
+
+    sessions = legacy_adapter.memory.list_sessions()
+    session_id = sessions[0][0] if sessions else legacy_adapter.memory.create_session("默认会话")
+    core_brain.set_session(session_id)
+
+
+    # print_session_status()
 
     # 循环对话
     while True:

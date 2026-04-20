@@ -2,7 +2,8 @@
 from langchain_openai import ChatOpenAI
 
 from src.config import MODEL_NAME, MODEL_API_KEY, MODEL_BASE_URL
-from src.db import create_session, add_message, get_session_history, get_session_name, update_session_name
+from src.db import create_session, add_message, get_session_history, get_session_name, update_session_name, \
+    list_all_sessions
 from src.logger import logger
 
 
@@ -48,6 +49,9 @@ class AgentMemory:
     def save_ai_message(self, session_id: str, content: str):
         add_message(session_id, 'ai', content)
         _summary_cache.pop(session_id, None)
+
+    def list_sessions(self):
+        return list_all_sessions()
 
     # ===================== 对话摘要生成 =============================
     def _generate_summary(self, session_id: str, history: list) -> str:
