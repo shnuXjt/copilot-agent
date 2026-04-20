@@ -1,15 +1,17 @@
 # 大脑： 遵循： 感知 -> 规划 -> 执行 -> 反思 -> 记忆 标准流程
 from adapter import legacy_adapter
-from core.brain.exec_agent import ExecAgent
-from core.brain.percept_agent import PerceptAgent
+from core.async_scheduler import AsyncScheduler
 from core.brain.plan_agent import PlanAgent
 from core.brain.reflect_agent import ReflectAgent
+import asyncio
 
 
 class CoreBrain:
     def __init__(self):
         self.adapter = legacy_adapter
         self.session_id = None
+        self.scheduler = AsyncScheduler()
+        self.reflector = ReflectAgent()
 
     # 设置当前会话
     def set_session(self, session_id):
@@ -17,23 +19,23 @@ class CoreBrain:
 
     # 会话： 执行主流程
     def chat(self, user_input: str):
-        # 1. 感知： 理解用户输入（意图 + 实体)
-        intent, skill_type, task = PerceptAgent().parse(user_input)
+        # DAG 规划
+        dag = PlanAgent().build_dag(user_input)
 
-        # 2. 规划： 生成执行任务（DAG骨架)
-        plan = PlanAgent().generate(skill_type, task)
+        # 异步执行DAG
+        asyncio.run(self.scheduler.run_dag(dag, self.session_id))
 
-        # 3. 执行：调度技能/工具
-        raw_result = ExecAgent().execute(plan, self.session_id)
+        # 汇总结果
+        final = []
+        for node in dag.nodes:
+            ref_result = self.reflector.refine(node.skill, node.task, node.result)
+            final.append(f"【任务 {node.task_id + 1}】\n{ref_result}")
 
-        # 4. 反思：校验 + 纠错
-        final_result = ReflectAgent().refine(skill_type, task, raw_result)
+        # 记忆
+        self.adapter.memory.save_user_message(self.session_id, user_input)
+        self.adapter.memory.save_ai_message(self.session_id, "\n\n".join(final))
 
-        # 5. 记忆
-        self.adapter.momery.add_message(self.session_id, "user", user_input)
-        self.adapter.memory.add_message(self.session_id, "assistant", final_result)
-
-        return final_result
+        return "\n\n".join(final)
 
 
 # 全局单例

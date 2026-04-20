@@ -47,7 +47,7 @@ class AgentMemory:
         _summary_cache.pop(session_id, None)
 
     def save_ai_message(self, session_id: str, content: str):
-        add_message(session_id, 'ai', content)
+        add_message(session_id, 'assistant', content)
         _summary_cache.pop(session_id, None)
 
     def list_sessions(self):

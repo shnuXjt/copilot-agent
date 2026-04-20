@@ -14,12 +14,12 @@ class LegacyAdapter:
         self.memory = agent_memory
 
     # 获取技能
-    def get_sill(self, skill_type: str):
+    def get_skill(self, skill_type: str):
         return self.skills.get(skill_type)
 
     # 执行技能
     def run_skill(self, skill_type: str, task: str, session_id: str):
-        skill = self.get_sill(skill_type)
+        skill = self.get_skill(skill_type)
         if not skill:
             return f"❌ 未知技能: {skill_type}"
         return skill.run(task=task, session_id=session_id)
