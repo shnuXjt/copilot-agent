@@ -18,6 +18,13 @@ class PlanAgent:
             skill = t["skill"]
             task_content = t["task"]
 
+            dep = t.get("depend_on", -1)
+
+            depend_on = []
+            if isinstance(dep, int) and dep >= 0:
+                depend_on = [dep]
+
+
             # 自动提取参数
             skill_obj = legacy_adapter.get_skill(skill)
             params = extract_params_from_nautral(task_content, skill_obj.parameters) if skill_obj else {}
@@ -26,7 +33,7 @@ class PlanAgent:
                 task_id = idx,
                 skill = skill,
                 task = task_content,
-                depend_on = [t["depend_on"]] if t.get("depend_on", -1) >= 0 else [],
+                depend_on = depend_on,
                 params = params
             )
             nodes.append(node)

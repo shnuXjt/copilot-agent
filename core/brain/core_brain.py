@@ -19,23 +19,26 @@ class CoreBrain:
 
     # 会话： 执行主流程
     def chat(self, user_input: str):
-        # DAG 规划
-        dag = PlanAgent().build_dag(user_input)
+        try:
+            # DAG 规划
+            dag = PlanAgent().build_dag(user_input)
 
-        # 异步执行DAG
-        asyncio.run(self.scheduler.run_dag(dag, self.session_id))
+            # 异步执行DAG
+            asyncio.run(self.scheduler.run_dag(dag, self.session_id))
 
-        # 汇总结果
-        final = []
-        for node in dag.nodes:
-            ref_result = self.reflector.refine(node.skill, node.task, node.result)
-            final.append(f"【任务 {node.task_id + 1}】\n{ref_result}")
+            # 汇总结果
+            final = []
+            for node in dag.nodes:
+                ref_result = self.reflector.refine(node.skill, node.task, node.result)
+                final.append(f"【任务 {node.task_id + 1}】\n{ref_result}")
 
-        # 记忆
-        self.adapter.memory.save_user_message(self.session_id, user_input)
-        self.adapter.memory.save_ai_message(self.session_id, "\n\n".join(final))
+            # 记忆
+            self.adapter.memory.save_user_message(self.session_id, user_input)
+            self.adapter.memory.save_ai_message(self.session_id, "\n\n".join(final))
 
-        return "\n\n".join(final)
+            return "\n\n".join(final)
+        except Exception as e:
+            return f"系统异常：{str(e)}"
 
 
 # 全局单例
