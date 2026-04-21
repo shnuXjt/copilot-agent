@@ -36,12 +36,13 @@ def main():
                 break
             continue
 
-        # 核心：2026 新架构执行
-        try:
-            reply = core_brain.chat(user_input)
-            print(f"AI: {reply}")
-        except Exception as e:
-            print(f"❌ 系统异常: {str(e)}")
+        print("AI: ", end="", flush=True)
+        full_reply = ""
+        for chunk in core_brain.chat(user_input):
+            print(chunk, end="", flush=True)
+            full_reply += chunk
+
+        legacy_adapter.memory.save_ai_message(session_id, full_reply)
 
 
 if __name__ == "__main__":
