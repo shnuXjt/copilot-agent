@@ -1,0 +1,15 @@
+# Protocol层配置： 接口映射，适配器配置
+# 适配器配置
+adapter:
+  legacy:
+    enabled: true # 是否启用旧架构适配器（兼容原有技能）
+
+# 专家智能体接口配置
+specialist:
+  base_path: "core.protocol.specialist" # 专家智能体路径
+  default_specialist: "chat_specialist" # 默认专家（无匹配技能时使用）
+
+# 接口标准话配置
+interface:
+  skill_call: "run" # 技能调用统一接口名
+  specialist_call: "run" # 专家调用统一接口名

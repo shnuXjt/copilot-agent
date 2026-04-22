@@ -1,3 +1,4 @@
+from langchain_experimental.graph_transformers.llm import system_prompt
 from langchain_experimental.llms.anthropic_functions import prompt
 from langchain_openai import ChatOpenAI
 # 线程池： 并行执行
@@ -6,7 +7,7 @@ from src.config import MODEL_NAME, MODEL_API_KEY, MODEL_BASE_URL
 from src.memory import agent_memory
 from src.skills.calc_skill import CalcSkill
 from src.skills.code_skill import CodeSkill
-from src.skills.datetime_skill import DateTimeSkill
+from src.skills.datetime_skill import DatetimeSkill
 from src.skills.excel_skill import ExcelSkill
 from src.skills.search_skill import SearchSkill
 from src.logger import logger
@@ -20,11 +21,11 @@ from src.skills.text_to_video_skill import TextToVideoSkill
 SKILLS = {
     "search": SearchSkill(),
     "excel": ExcelSkill(),
-    "calc": CalcSkill(),
-    "code": CodeSkill(),
-    "datetime": DateTimeSkill(),
-    "text_to_image": TextToImageSkill(),    # 文生图
-    "text_to_video": TextToVideoSkill()     # 文生视频
+    # "calc": CalcSkill(),
+    # "code": CodeSkill(),
+    "datetime": DatetimeSkill(),
+    # "text_to_image": TextToImageSkill(),    # 文生图
+    # "text_to_video": TextToVideoSkill()     # 文生视频
 }
 
 # 自动生成技能 + 参数说明
@@ -73,43 +74,28 @@ planner_llm = ChatOpenAI(
 )
 #========================== 核心：LLM自动任务拆解（结构化JSON）=================================
 # 升级： 增加 重试 + 校验
-def llm_parse_task(user_task: str, retry: int = 1) -> list:
+def llm_parse_task(user_task: str, retry: int = 1, context: str="", prompt="",  capabilities: dict = {}) -> list:
     """
     LLM自动拆解用户任务 → 输出有序子任务列表
     返回：[ {"worker": "search", "task": "xxx"}, ... ]
     """
-    system_prompt =f"""
-    你是专业的AI任务规划师，只输出**纯净JSON**，不添加任何多余文字、解释、markdown。
+    if not prompt:
+        prompt = f"""
+            请将用户输入：{user_task}，结合会话上下文：{context}，拆解为多个可执行的子任务。
+            可用工具/资源：{capabilities.get('tools', [])}（工具）、{capabilities.get('resources', [])}（资源）
+            每个子任务必须包含以下3个字段，返回JSON格式（仅JSON，无多余描述）：
+            1. skill：技能名称（必须是可用工具中的tool_name，如search_tool、excel_tool）
+            2. task：具体任务描述（清晰、可执行，贴合对应技能的功能）
+            3. depend_on：依赖的子任务ID（无依赖填-1，有依赖填对应子任务的task_id，从0开始计数）
+            子任务数量不超过 10个，确保子任务无重复、无冗余，可并行/串行执行。
+            """
+    else:
+        # 2. 若有MCP提示模板，补充MCP能力清单（新增逻辑，适配MCP能力发现）
+        prompt += f"\n可用工具/资源：{capabilities.get('tools', [])}（工具）、{capabilities.get('resources', [])}（资源），子任务数量不超过10个，仅返回JSON格式。"
 
-    可用Skill类型：
-    - search：联网搜索实时/最新信息
-    - excel：读取、分析Excel文件
-    - calc：数学计算、求和、求差、乘法等
-    - code：执行Python代码处理复杂逻辑
-    - datetime：获取当前日期、时间、星期几
-    - text_to_image: 文生图
-    - text_to_video：文生视频
-    
-    技能参数规范：
-    {SKILL_PARAM_DESC}
-    
-    拆解规则：
-    1. 按执行顺序拆分子任务
-    2. 子任务必须依赖前序结果时，要明确写清楚
-    3. 不拆分无意义的小任务
-    4. 严格输出JSON格式，结构如下：
-        {{
-            "sub_tasks": [
-                {{"skill": "skill类型", "task": "清晰的子任务描述", "depend_on": -1}}
-            ]
-        }}
-    5. depend_on=-1 → 无依赖，可并行执行
-    6. depend_on=0 → 依赖第1个任务，必须串行
-    7. 无关联任务（如查时间+搜新闻+画图）全部设为-1，并行执行
-    """
-    user_prompt = f"用户任务：{user_task}\n请按规则拆解为有序子任务，只返回JSON"
+    # 3. 调用LLM获取拆解结果（复用原有LLM调用逻辑）
     # 调用LLM拆解
-    response = planner_llm.invoke(f"{system_prompt}\n{user_prompt}")
+    response = planner_llm.invoke(prompt)
     raw_content = response.content.strip()
 
     # 清晰LLM可能带回的'''json标记

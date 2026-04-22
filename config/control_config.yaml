@@ -1,0 +1,17 @@
+# control层配置： 调度，规划，反思策略
+# 核心控制器配置
+core:
+  stream_delay: 0.02 # 流式输入字符延迟（秒）
+  task_delay: 0.1 # 任务输出延迟（秒）
+
+# 规划控制器配置
+plan:
+  enable_context: true # 是否使用上下文辅助任务拆解
+  max_sub_tasks: 10 # 最大子任务数量
+# 调度控制器配置
+scheduler:
+  enable_async: true # 是否启用异步并行调度
+# 反思控制器配置
+reflect:
+  enable_retry: true # 是否启用自动重试
+  max_retry: 1 # 最大重试次数

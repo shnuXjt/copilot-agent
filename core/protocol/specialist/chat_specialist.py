@@ -1,4 +1,4 @@
-from core.brain.specialists.base_specialist import BaseSpecialist
+from core.protocol.specialist.base_specialist import BaseSpecialist
 from src.manager_agent import main_llm
 
 

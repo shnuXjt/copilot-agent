@@ -1,0 +1,27 @@
+# Model层配置： 记忆规则，任务参数，技能定义
+# 记忆配置
+memory:
+  short_memory:
+    enabled: true # 是否启用短期记忆
+  long_memory:
+    enabled: true # 是否启用长期记忆
+    vector_db:
+      persis_dir: "./storage/vector_db" # 向量数据库存储目录
+      top_k: 3 # 检索最大数量
+      timeout: 5 # 检索超时时间（秒）
+      tiktoken_cache: "./storage/tiktoken_cache" # tiktoken 本地缓存目录
+# 任务模型配置
+task:
+  dag:
+    max_parallel: 5 # DAG最大并行任务数
+    node_timeout: 10 # 单个任务节点超时时间（秒）
+  # 技能配置（支持动态新增）
+  skills:
+    enabled:
+      - search # 启用搜索技能
+      - excel # 启用excel技能
+      - chat # 启用对话技能
+    mapping: # 技能与专家智能体映射
+      search: "search_specialist"
+      excel: "excel_specialist"
+      chat: "chat_specialist"

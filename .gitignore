@@ -9,3 +9,5 @@ venv/
 工程化.md
 agent_memory.db
 docs/
+storage/
+tiktoken

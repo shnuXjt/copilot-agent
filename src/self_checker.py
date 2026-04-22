@@ -206,5 +206,29 @@ AI回答：{result}
         logger.info("✅ 自检全部通过")
         return True, "自检通过"
 
+    def check(self, skill: str, task: str, result: str, prompt: str) -> str:
+        """
+        LLM 二次审查： 判断结果是否正确， 是否符合任务要求，是否编造
+        只做三件事， 不要质疑客观工具真值
+        1. 是否答非所问
+        2. 是否明显胡编/无意义
+        3. 是否包含错误标识（错误，未知，未找到）
+        """
+        # 对日期，计算类精准技能，只做轻校验，不挑战真值
+        if skill in ["datetime", "calc", "search", "excel"]:
+            if any(word in result for word in ["错误", "未知", "无法"]):
+                return False, "结果包含错误标识"
+            if len(result.strip()) < 5:
+                return False, "结果过短， 无有效信息"
+            return True, "校验通过（精准技能豁免深度校验）"
+        # 聊天，搜索， Excel： 正常做合理性校验
+        check_result = self.check_llm.invoke(prompt.format(
+            task=task,
+            result=result,
+            skill=skill
+
+        )).content.strip()
+        return check_result
+
 # 全局单例（全项目复用)
 self_checker = SelfChecker()

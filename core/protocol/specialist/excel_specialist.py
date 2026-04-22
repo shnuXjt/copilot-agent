@@ -1,5 +1,5 @@
-from adapter import legacy_adapter
-from core.brain.specialists.base_specialist import BaseSpecialist
+from core.protocol.adapter.legacy_adapter import legacy_adapter
+from core.protocol.specialist.base_specialist import BaseSpecialist
 
 
 class ExcelSpecialist(BaseSpecialist):
